@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.intalgent.addressbook.domain.Table;
 import com.intalgent.addressbook.domain.TableField;
@@ -124,10 +125,29 @@ public class TableXlsWrite {
             PoiExlUtil.addNormalCell(sheet, style, row, col++, tableField.getRemarks());
             row++;
         }
-//        metaData.getIndexInfo(null, tableName); //索引信息
-//        metaData.getAllPrimaryKeys(null, tableName);
-//        metaData.getAllExportedKeys(null, tableName);
-        metaData.getAllSchemas();
+
+        //所有索引信息
+        metaData.getIndexInfo(null, table);
+        Map<String, List<String>> keyMap = table.getKeyMap();
+        if(keyMap != null){
+
+            for(Map.Entry<String, List<String>> entry : keyMap.entrySet()){
+                String keyName = entry.getKey();
+                List<String> columuNameList = entry.getValue();
+                StringBuilder sb = new StringBuilder("(");
+                for(int i = 0; i < columuNameList.size(); i++){
+                    sb.append(columuNameList.get(i));
+                    if(i < columuNameList.size() - 1){
+                        sb.append(",");
+                    }else{
+                        sb.append(")");
+                    }
+                }
+                PoiExlUtil.addNormalCell(sheet, null, row, 0, "KEY " + keyName +  sb.toString());
+                PoiExlUtil.addMergedRegion(sheet,row, row++,0, 5);
+            }
+        }
+
         return row;
     }
 

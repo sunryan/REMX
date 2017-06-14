@@ -10,7 +10,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 
@@ -190,9 +192,10 @@ public class DatabaseMetaDateApplication {
     /**
      * 获得一个表的索引信息
      */
-    public void getIndexInfo(String schemaName, String tableName) {
+    public void getIndexInfo(String schemaName, Table table) {
         try{
-            ResultSet rs = dbMetaData.getIndexInfo(null, schemaName, tableName, true, true);
+            Map<String ,List<String>> keyMap = new HashMap<String, List<String>>();
+            ResultSet rs = dbMetaData.getIndexInfo(null, schemaName, table.getTableName(), false, false);
             while (rs.next()){
                 boolean nonUnique = rs.getBoolean("NON_UNIQUE");//非唯一索引(Can index values be non-unique. false when TYPE is  tableIndexStatistic   )
                 String indexQualifier = rs.getString("INDEX_QUALIFIER");//索引目录（可能为空）
@@ -209,8 +212,16 @@ public class DatabaseMetaDateApplication {
                     case 2 : typeStr = "哈希表索引"; break;
                     case 3 : typeStr = "其他索引"; break;
                 }
+                List<String> list = keyMap.get(indexName);
+                if(list == null){
+                    list = new ArrayList<String>();
+                    keyMap.put(indexName, list);
+                }
+                list.add(columnName);
                 System.out.println("索引信息:" + nonUnique + "-" + indexQualifier + "-" + indexName + "-" + typeStr + "-" + ordinalPosition + "-" + columnName + "-" + ascOrDesc + "-" + cardinality);
+
             }
+            table.setKeyMap(keyMap);
         } catch (SQLException e){
             e.printStackTrace();
         }

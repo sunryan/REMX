@@ -5,6 +5,7 @@ import org.apache.poi.hssf.usermodel.HSSFCell;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 表结构
@@ -16,16 +17,24 @@ public class Table {
 
     private List<String> primaryList;  //主键
 
-    private String key;     //索引
-
     private String unique;  //唯一字段
 
     private String comment; //表说明
 
     private List<TableField> fields;
 
+    private Map<String,List<String>> keyMap; //所有索引map key：索引名， value:列名，多个
+
     private HSSFCell cell; //位置
 
+
+    public Map<String, List<String>> getKeyMap() {
+        return keyMap;
+    }
+
+    public void setKeyMap(Map<String, List<String>> keyMap) {
+        this.keyMap = keyMap;
+    }
 
     public Table(String tableName) {
         this.tableName = tableName;
@@ -48,15 +57,6 @@ public class Table {
             primaryList = new ArrayList<String>();
         }
         this.primaryList.add(primary);
-    }
-
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
     }
 
     public String getUnique() {
