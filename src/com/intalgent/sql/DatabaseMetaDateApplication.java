@@ -1,12 +1,16 @@
 package com.intalgent.sql;
 
 import com.intalgent.addressbook.domain.Contact;
+import com.intalgent.addressbook.domain.Procedure;
 import com.intalgent.addressbook.domain.Table;
 import com.intalgent.addressbook.domain.TableField;
+import com.intalgent.addressbook.domain.TableIndex;
+import com.intalgent.addressbook.domain.Task;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -24,7 +28,18 @@ public class DatabaseMetaDateApplication {
     private DatabaseMetaData dbMetaData = null;
     private Connection con = null;
 
-    public DatabaseMetaDateApplication(){}
+    public DatabaseMetaDateApplication() throws SQLException, ClassNotFoundException {
+        Contact contact = new Contact(
+                "com.mysql.jdbc.Driver",
+                "jdbc:mysql://192.168.1.170:3306/fyb2b_goods",
+                "fuyou",
+                "123456",
+                ""
+        );
+        this.contact = contact;
+        setDatabaseMetaData();
+
+    }
 
     public DatabaseMetaDateApplication(Contact contact) throws SQLException, ClassNotFoundException {
         this.contact = contact;
@@ -192,40 +207,112 @@ public class DatabaseMetaDateApplication {
     /**
      * 获得一个表的索引信息
      */
-    public void getIndexInfo(String schemaName, Table table) {
+    public List<TableIndex> getIndexInfo(String schemaName, Table table) {
+        Map<String ,TableIndex> keyMap = new HashMap<String, TableIndex>();
+        List<TableIndex> indexList = new ArrayList<TableIndex>();
         try{
-            Map<String ,List<String>> keyMap = new HashMap<String, List<String>>();
-            ResultSet rs = dbMetaData.getIndexInfo(null, schemaName, table.getTableName(), false, false);
-            while (rs.next()){
-                boolean nonUnique = rs.getBoolean("NON_UNIQUE");//非唯一索引(Can index values be non-unique. false when TYPE is  tableIndexStatistic   )
-                String indexQualifier = rs.getString("INDEX_QUALIFIER");//索引目录（可能为空）
-                String indexName = rs.getString("INDEX_NAME");//索引的名称
-                short type = rs.getShort("TYPE");//索引类型
-                String typeStr = "";
-                short ordinalPosition = rs.getShort("ORDINAL_POSITION");//在索引列顺序号
-                String columnName = rs.getString("COLUMN_NAME");//列名
-                String ascOrDesc = rs.getString("ASC_OR_DESC");//列排序顺序:升序还是降序
-                int cardinality = rs.getInt("CARDINALITY");   //基数
-                switch ( type){
-                    case 0 : typeStr = "没有索引"; break;
-                    case 1 : typeStr = "聚集索引"; break;
-                    case 2 : typeStr = "哈希表索引"; break;
-                    case 3 : typeStr = "其他索引"; break;
-                }
-                List<String> list = keyMap.get(indexName);
-                if(list == null){
-                    list = new ArrayList<String>();
-                    keyMap.put(indexName, list);
-                }
-                list.add(columnName);
-                System.out.println("索引信息:" + nonUnique + "-" + indexQualifier + "-" + indexName + "-" + typeStr + "-" + ordinalPosition + "-" + columnName + "-" + ascOrDesc + "-" + cardinality);
+            String sql = "show index from " + table.getTableName();
+            PreparedStatement pst = con.prepareStatement(sql);
+            ResultSet rs = pst.executeQuery();
 
+//            ResultSet rs = dbMetaData.getIndexInfo(null, schemaName, table.getTableName(), false, false);
+            while (rs.next()){
+               /* String tableCat = rs.getString("TABLE_CAT"); //表类别（可为 null）
+                String tableSchem = rs.getString("TABLE_SCHEM"); //表模式（可为 null）
+                String tableName = rs.getString("TABLE_NAME"); //表名称
+                boolean unique = rs.getBoolean("NON_UNIQUE"); //索引值是否可以不惟一。TYPE 为 tableIndexStatistic 时索引值为 false
+                String qualifier = rs.getString("INDEX_QUALIFIER");//索引类别（可为 null）；TYPE 为 tableIndexStatistic 时索引类别为 null
+                String name = rs.getString("INDEX_NAME"); //索引名称；TYPE 为 tableIndexStatistic 时索引名称为 null
+                short type = rs.getShort("TYPE"); //索引类型：
+                short position = rs.getShort("ORDINAL_POSITION"); //索引中的列序列号；TYPE 为 tableIndexStatistic 时该序列号为零
+                String columnName = rs.getString("COLUMN_NAME"); //列名称；TYPE 为 tableIndexStatistic 时列名称为 null
+                String order = rs.getString("ASC_OR_DESC"); //列排序序列，"A" => 升序，"D" => 降序，如果排序序列不受支持，可能为 null；TYPE 为 tableIndexStatistic 时排序序列为 null
+                int cardinality = rs.getInt("CARDINALITY"); //TYPE 为 tableIndexStatistic 时，它是表中的行数；否则，它是索引中惟一值的数量。
+                int pages = rs.getInt("PAGES"); //TYPE 为 tableIndexStatisic 时，它是用于表的页数，否则它是用于当前索引的页数。
+                String filter = rs.getString("FILTER_CONDITION"); //过滤器条件，如果有的话。（可能为 null）
+
+                System.out.println("索引信息："  + tableCat + "\t" + tableSchem + "\t" + tableName + "\t" + unique + "\t" + qualifier + "\t" + name + "\t" +
+                        type + "\t" + position + "\t" + columnName + "\t" + order + "\t" + cardinality + "\t" + pages + "\t" + filter);*/
+
+                String name = rs.getString("Key_name");
+                Boolean isUnique = rs.getBoolean("Non_unique");
+                String type = rs.getString("Index_type");
+                String columnName = rs.getString("Column_name");
+                String comment = rs.getString("Comment");
+                TableIndex tableIndex = keyMap.get(name);
+                if(tableIndex == null){
+                    tableIndex = new TableIndex(name, type, comment);
+                    tableIndex.setUnique(!isUnique);
+                    keyMap.put(name, tableIndex);
+                    indexList.add(tableIndex);
+                }
+                tableIndex.addColumnName(columnName);
             }
-            table.setKeyMap(keyMap);
         } catch (SQLException e){
             e.printStackTrace();
         }
+        return indexList;
     }
+
+    /**
+     * 获取表的存储方法
+     */
+    public List<Procedure> getProcedures() throws SQLException {
+        List<Procedure> list = new ArrayList<Procedure>();
+        ResultSet rs = dbMetaData.getProcedures(null, "", "");
+        while (rs.next()){
+            String name = rs.getString("PROCEDURE_NAME");
+            Short type = rs.getShort("PROCEDURE_TYPE");
+            String comment = rs.getString("REMARKS");
+            System.out.println(name + " "+ type + " "+comment);
+            Procedure procedure = new Procedure(name, type, comment);
+            String sqlModle = "";
+            String content = "";
+            if(type == 2){
+                String sql = "SHOW CREATE FUNCTION " + name;
+                PreparedStatement pst = con.prepareStatement(sql);
+                ResultSet rs1 = pst.executeQuery();
+                while(rs1.next()){
+                     sqlModle = rs1.getString("sql_mode");
+                     content = rs1.getString("create Function");
+                }
+            }else{
+                String sql = "SHOW CREATE PROCEDURE " + name;
+                PreparedStatement pst = con.prepareStatement(sql);
+                ResultSet rs1 = pst.executeQuery();
+                while(rs1.next()){
+                     sqlModle = rs1.getString("sql_mode");
+                     content = rs1.getString("create Procedure");
+                }
+            }
+            procedure.setSqlModle(sqlModle);
+            procedure.setContent(content);
+            list.add(procedure);
+        }
+        return list;
+    }
+    /**
+     * 获取表的定时任务
+     */
+    public List<Task> getTasks(String dbName) throws SQLException {
+        List<Task> list = new ArrayList<Task>();
+        String sql = "SELECT * FROM INFORMATION_SCHEMA.EVENTS WHERE EVENT_SCHEMA = ?";
+        PreparedStatement pst = con.prepareStatement(sql);
+        pst.setString(1, dbName);
+        ResultSet rs1 = pst.executeQuery();
+        while(rs1.next()){
+            String name = rs1.getString("EVENT_NAME");
+            String content = rs1.getString("EVENT_DEFINITION");
+            String value = rs1.getString("INTERVAL_VALUE");
+            String field = rs1.getString("INTERVAL_FIELD");
+            String starts = rs1.getString("STARTS");
+            String Status = rs1.getString("STATUS");
+            String comment = rs1.getString("EVENT_COMMENT");
+            list.add(new Task(name, content, comment));
+        }
+        return list;
+    }
+
 
 
     /**
@@ -315,17 +402,19 @@ public class DatabaseMetaDateApplication {
     }
 
 
-    public static void main(String[] args) {
-/*        DatabaseMetaDateApplication metaData = new DatabaseMetaDateApplication();
+    public static void main(String[] args) throws SQLException, ClassNotFoundException {
+        DatabaseMetaDateApplication metaData = new DatabaseMetaDateApplication();
+        metaData.getProcedures();
+//        metaData.getIndexInfo(null, new Table("b2b_goods"));
 //		metaData.getDataBaseInformations();
-        metaData.getAllTableList(null); //表信息
+//        metaData.getAllTableList(null); //表信息
 //		metaData.getAllViewList(null);  //视图信息
-        metaData.getAllSchemas();
+//        metaData.getAllSchemas();
 //		metaData.getTableColumns(null, "zsc_admin");
 //		metaData.getIndexInfo(null, "zsc_admin");
 //		metaData.getAllPrimaryKeys(null, "zsc_admin");
 //        metaData.getAllExportedKeys(null, "zsc_admin");
-        metaData.colseCon();*/
+        metaData.colseCon();
 
 
     }

@@ -70,7 +70,8 @@ public class ContactWizard extends Wizard
         try {
             String fileName = page1.getJdbcUrlText();
             String outUrl = page1.getOutUrlText();
-            fileName =  fileName.substring(fileName.lastIndexOf("/") + 1) + "结构信息.xls";
+            String dbName = fileName.substring(fileName.lastIndexOf("/") + 1);
+            fileName =  dbName + "结构信息.xls";
             if(outUrl.lastIndexOf("/") == outUrl.length() - 1){
                 outUrl = outUrl.substring(0, outUrl.length() - 1);
             }
@@ -79,7 +80,7 @@ public class ContactWizard extends Wizard
             if(!file.isDirectory()) {
                 file.mkdirs();
             }
-            TableXlsWrite write = new TableXlsWrite(outPath ,metaData);
+            TableXlsWrite write = new TableXlsWrite(dbName, outPath ,metaData);
             write.start();
             contact.setOutUrl(outPath);
         } catch (FileNotFoundException e) {
@@ -88,7 +89,9 @@ public class ContactWizard extends Wizard
         } catch (IOException e) {
             page1.updateStatus("生成文件失败");
             return false;
-        }finally {
+        } catch (SQLException e) {
+            page1.updateStatus("sql 错误");
+        } finally {
             if(metaData != null){
                 metaData.colseCon();
             }

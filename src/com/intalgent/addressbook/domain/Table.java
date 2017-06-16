@@ -23,18 +23,8 @@ public class Table {
 
     private List<TableField> fields;
 
-    private Map<String,List<String>> keyMap; //所有索引map key：索引名， value:列名，多个
-
     private HSSFCell cell; //位置
 
-
-    public Map<String, List<String>> getKeyMap() {
-        return keyMap;
-    }
-
-    public void setKeyMap(Map<String, List<String>> keyMap) {
-        this.keyMap = keyMap;
-    }
 
     public Table(String tableName) {
         this.tableName = tableName;

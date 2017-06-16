@@ -28,7 +28,6 @@ public class BasicContactPage extends WizardPage {
     {
         super("wizardPage");
         setTitle("生成XML文件");
-//        setDescription("填写数据源信息以及导出目录"); //副标题
         this.selection = selection;
     }
 
